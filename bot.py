@@ -40,6 +40,9 @@ def send_welcome(message):
             writer = pandas.ExcelWriter('leading.xlsx', engine='xlsxwriter')
             fr.to_excel(writer, 'Timetable', index=False)
             writer.save()
+            bot.send_message(message.from_user.id, "Добро пожаловать! Я тебя узнал! Теперь ты есть в списке ведущих!")
+        else:
+            bot.send_message(message.from_user.id, "Приятно познакомиться! Но ты пока не ведущий ;)")
 
 
 def find_user_name(day, month):
