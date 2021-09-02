@@ -30,7 +30,8 @@ def send_welcome(message):
     if message.chat.type == "private":
         excel_data_df = pandas.read_excel('leading.xlsx', sheet_name='Timetable')
         user_names = excel_data_df['User name'].tolist()
-        if allowed_leaders.__contains__(message.chat.username) and not user_names.__contains__(message.chat.username):
+        print(message.chat.username)
+        if (message.chat.username in allowed_leaders) and (message.chat.username not in user_names):
             wr = pandas.DataFrame(
                 {'Name': [message.chat.first_name],
                  'User name': [message.chat.username],
@@ -42,7 +43,7 @@ def send_welcome(message):
             fr.to_excel(writer, 'Timetable', index=False)
             writer.save()
             bot.send_message(message.from_user.id, "Добро пожаловать! Я тебя узнал! Теперь ты есть в списке ведущих!")
-        elif user_names.__contains__(message.chat.username):
+        elif message.chat.username in user_names:
             bot.send_message(message.from_user.id, "А я уже тебя знаю! Ты записан как ведущий.")
         else:
             bot.send_message(message.from_user.id, "Приятно познакомиться! Но ты пока не ведущий ;)")
@@ -84,8 +85,10 @@ def cycle_scheduling():
 
 def init_leaders_names():
     f = open('leaders_names.txt', 'r')
+    global allowed_leaders
     for line in f:
         allowed_leaders.append(line)
+    allowed_leaders = [line.rstrip() for line in allowed_leaders]
     f.close()
 
 
