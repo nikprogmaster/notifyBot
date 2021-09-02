@@ -3,11 +3,12 @@ import telebot
 import datetime
 import pandas
 import leader
-from multiprocessing import *
+from threading import Thread
 
 bot = telebot.TeleBot('1870191359:AAG31P76p2xoTLcCGMt_dSnLn-sgQRp62ws')
 leaders = []
 allowed_leaders = []
+
 
 def read_timetable():
     excel_data = pandas.read_excel('leading.xlsx', sheet_name='Timetable')
@@ -24,7 +25,7 @@ def read_timetable():
     print(leaders)
 
 
-@bot.message_handler(commands=['start'])
+@bot.message_handler(commands=['start'], content_types=['text'])
 def send_welcome(message):
     if message.chat.type == "private":
         excel_data_df = pandas.read_excel('leading.xlsx', sheet_name='Timetable')
@@ -41,6 +42,8 @@ def send_welcome(message):
             fr.to_excel(writer, 'Timetable', index=False)
             writer.save()
             bot.send_message(message.from_user.id, "Добро пожаловать! Я тебя узнал! Теперь ты есть в списке ведущих!")
+        elif user_names.__contains__(message.chat.username):
+            bot.send_message(message.from_user.id, "А я уже тебя знаю! Ты записан как ведущий.")
         else:
             bot.send_message(message.from_user.id, "Приятно познакомиться! Но ты пока не ведущий ;)")
 
@@ -53,15 +56,27 @@ def find_user_name(day, month):
     return chat_id
 
 
-def send_message():
+def send_message_in_day():
     read_timetable()
     current_date = datetime.datetime.today()
     chat_id = find_user_name(current_date.day, current_date.month)
     print(current_date)
-    bot.send_message(int(chat_id), 'Hello')
+    if chat_id != "":
+        bot.send_message(int(chat_id), 'Напоминаю тебе, что сегодня ты ведущий дневника МПшника! Отожги по максимуму!')
+
+
+def send_message_the_day_before():
+    read_timetable()
+    current_date = datetime.datetime.today()
+    chat_id = find_user_name(current_date.day+1, current_date.month)
+    print(current_date)
+    bot.send_message(int(chat_id), 'Не забудь, что завтра ты ведущий дневника МПшника! Подготовься.')
 
 
 def cycle_scheduling():
+    print("It is true")
+    schedule.every().day.at("09:00").do(send_message_in_day)
+    schedule.every().day.at("09:00").do(send_message_the_day_before)
     while True:
         schedule.run_pending()
         time.sleep(1)
@@ -74,11 +89,15 @@ def init_leaders_names():
     f.close()
 
 
+def start_bot():
+    bot.polling(non_stop=True, interval=1)
+
+
 print("Bot is working")
 
-schedule.every().day.at("22:42").do(send_message)
-Process(target=cycle_scheduling()).start()
-
-bot.polling(none_stop=True, interval=0)
-
+init_leaders_names()
+t1 = Thread(target=start_bot)
+t2 = Thread(target=cycle_scheduling)
+t1.start()
+t2.start()
 
