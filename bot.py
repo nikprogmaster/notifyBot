@@ -4,10 +4,12 @@ import datetime
 import pandas
 import leader
 from threading import Thread
+import random
 
 bot = telebot.TeleBot('1870191359:AAG31P76p2xoTLcCGMt_dSnLn-sgQRp62ws')
 leaders = []
 allowed_leaders = []
+reply_phrases = []
 
 
 def read_timetable():
@@ -61,23 +63,24 @@ def send_message_in_day():
     read_timetable()
     current_date = datetime.datetime.today()
     chat_id = find_user_name(current_date.day, current_date.month)
-    print(current_date)
     if chat_id != "":
-        bot.send_message(int(chat_id), 'Напоминаю тебе, что сегодня ты ведущий дневника МПшника! Отожги по максимуму!')
+        random_index = random.randrange(0, len(reply_phrases))
+        random_phrase = reply_phrases[random_index]
+        bot.send_message(int(chat_id), random_phrase)
 
 
 def send_message_the_day_before():
     read_timetable()
     current_date = datetime.datetime.today()
     chat_id = find_user_name(current_date.day+1, current_date.month)
-    print(current_date)
-    bot.send_message(int(chat_id), 'Не забудь, что завтра ты ведущий дневника МПшника! Подготовься.')
+    if chat_id != "":
+        bot.send_message(int(chat_id), 'Не забудь, что завтра ты ведущий дневника МПшника! Подготовься.')
 
 
 def cycle_scheduling():
     print("It is true")
-    schedule.every().day.at("09:00").do(send_message_in_day)
-    schedule.every().day.at("09:00").do(send_message_the_day_before)
+    schedule.every().day.at("05:00").do(send_message_in_day)
+    schedule.every().day.at("05:00").do(send_message_the_day_before)
     while True:
         schedule.run_pending()
         time.sleep(1)
@@ -92,6 +95,15 @@ def init_leaders_names():
     f.close()
 
 
+def init_reply_phrases():
+    f = open('reply_phrases.txt', 'r', encoding="utf-8")
+    global reply_phrases
+    for line in f:
+        reply_phrases.append(line)
+    reply_phrases = [line.rstrip() for line in reply_phrases]
+    f.close()
+
+
 def start_bot():
     bot.polling(non_stop=True, interval=1)
 
@@ -99,6 +111,8 @@ def start_bot():
 print("Bot is working")
 
 init_leaders_names()
+init_reply_phrases()
+
 t1 = Thread(target=start_bot)
 t2 = Thread(target=cycle_scheduling)
 t1.start()

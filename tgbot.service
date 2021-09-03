@@ -1,0 +1,14 @@
+[Unit]
+Description=Notify Bot
+After=network.target
+
+[Service]
+User=nikita
+Group=nikita
+
+WorkingDirectory=/home/nikita/notifyBot/
+Environment="PYTHONPATH=/home/nikita/notifyBot/"
+ExecStart=python3 /home/nikita/notifyBot/bot.py
+
+[Install}
+WantedBy=multi-user.target
