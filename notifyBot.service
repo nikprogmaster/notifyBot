@@ -10,5 +10,5 @@ WorkingDirectory=/home/nikita/notifyBot/
 Environment="PYTHONPATH=/home/nikita/notifyBot/"
 ExecStart=/usr/bin/python3 /home/nikita/notifyBot/bot.py
 
-[Install}
+[Install]
 WantedBy=multi-user.target
