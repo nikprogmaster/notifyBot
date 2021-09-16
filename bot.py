@@ -51,6 +51,12 @@ def send_welcome(message):
             bot.send_message(message.from_user.id, "Приятно познакомиться! Но ты пока не ведущий ;)")
 
 
+def find_last_leader_date():
+    leaders.sort(key=lambda leader: leader.date)
+    if len(leaders) > 0:
+        return leaders[len(leaders)-1]
+
+
 def find_user_name(day, month):
     chat_id = ""
     for leader in leaders:
@@ -71,10 +77,40 @@ def send_message_in_day():
 
 def send_message_the_day_before():
     read_timetable()
-    current_date = datetime.datetime.today()
-    chat_id = find_user_name(current_date.day+1, current_date.month)
+    tomorrow_date = datetime.datetime.today() + datetime.timedelta(days=1)
+    chat_id = find_user_name(tomorrow_date.day, tomorrow_date.month)
     if chat_id != "":
         bot.send_message(int(chat_id), 'Не забудь, что завтра ты ведущий дневника МПшника! Подготовься.')
+    last_leader = find_last_leader_date()
+    if last_leader is not None and (last_leader.date.day == tomorrow_date.day and last_leader.date.month == tomorrow_date.month):
+        update_schedule()
+
+
+def update_schedule():
+    excel_data = pandas.read_excel('leading.xlsx', sheet_name='Timetable')
+    names_list = excel_data['Name'].tolist()
+    user_names_list = excel_data['User name'].tolist()
+    chat_ids_list = excel_data['Chat id'].tolist()
+    days_list = excel_data['Day'].tolist()
+    month_list = excel_data['Month'].tolist()
+    new_days_list = []
+    new_month_list = []
+
+    for i in range(0, len(names_list)):
+        l = leader.Leader(names_list[i], user_names_list[i], chat_ids_list[i], days_list[i], month_list[i])
+        l.append_date(len(names_list))
+        new_days_list.append(l.date.day)
+        new_month_list.append(l.date.month)
+
+    result_frame = pandas.DataFrame(
+        {'Name': names_list,
+         'User name': user_names_list,
+         'Chat id': chat_ids_list,
+         'Day': new_days_list,
+         'Month': new_month_list})
+    writer = pandas.ExcelWriter('leading.xlsx', engine='xlsxwriter')
+    result_frame.to_excel(writer, 'Timetable', index=False)
+    writer.save()
 
 
 def cycle_scheduling():

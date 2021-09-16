@@ -13,3 +13,7 @@ class Leader:
         self.user_name = user_name
         self.chat_id = chat_id
         self.date = datetime.date(current_date.year, month, day)
+
+    def append_date(self, days):
+        self.date = self.date + datetime.timedelta(days=days)
+
