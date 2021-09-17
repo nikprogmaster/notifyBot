@@ -73,6 +73,9 @@ def send_message_in_day():
         random_index = random.randrange(0, len(reply_phrases))
         random_phrase = reply_phrases[random_index]
         bot.send_message(int(chat_id), random_phrase)
+    last_leader = find_last_leader_date()
+    if last_leader is not None and (last_leader.date.day == current_date.day and last_leader.date.month == current_date.month):
+        update_last_leader()
 
 
 def send_message_the_day_before():
@@ -93,21 +96,43 @@ def update_schedule():
     chat_ids_list = excel_data['Chat id'].tolist()
     days_list = excel_data['Day'].tolist()
     month_list = excel_data['Month'].tolist()
-    new_days_list = []
-    new_month_list = []
 
-    for i in range(0, len(names_list)):
+    for i in range(0, len(names_list) - 1):
         l = leader.Leader(names_list[i], user_names_list[i], chat_ids_list[i], days_list[i], month_list[i])
         l.append_date(len(names_list))
-        new_days_list.append(l.date.day)
-        new_month_list.append(l.date.month)
+        days_list[i] = l.date.day
+        month_list[i] = l.date.month
 
     result_frame = pandas.DataFrame(
         {'Name': names_list,
          'User name': user_names_list,
          'Chat id': chat_ids_list,
-         'Day': new_days_list,
-         'Month': new_month_list})
+         'Day': days_list,
+         'Month': month_list})
+    writer = pandas.ExcelWriter('leading.xlsx', engine='xlsxwriter')
+    result_frame.to_excel(writer, 'Timetable', index=False)
+    writer.save()
+
+
+def update_last_leader():
+    excel_data = pandas.read_excel('leading.xlsx', sheet_name='Timetable')
+    names_list = excel_data['Name'].tolist()
+    user_names_list = excel_data['User name'].tolist()
+    chat_ids_list = excel_data['Chat id'].tolist()
+    days_list = excel_data['Day'].tolist()
+    month_list = excel_data['Month'].tolist()
+    length = len(names_list)
+    l = leader.Leader(names_list[length-1], user_names_list[length-1], chat_ids_list[length-1], days_list[length-1], month_list[length-1])
+    l.append_date(len(names_list))
+    days_list[length-1] = l.date.day
+    month_list[length-1] = l.date.month
+
+    result_frame = pandas.DataFrame(
+        {'Name': names_list,
+         'User name': user_names_list,
+         'Chat id': chat_ids_list,
+         'Day': days_list,
+         'Month': month_list})
     writer = pandas.ExcelWriter('leading.xlsx', engine='xlsxwriter')
     result_frame.to_excel(writer, 'Timetable', index=False)
     writer.save()
