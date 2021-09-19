@@ -57,7 +57,6 @@ def who_is_leader_today(message):
     read_timetable()
     if message.chat.username in allowed_leaders:
         current_date = datetime.datetime.today()
-        current_date.replace(hour=current_date.hour+3)
         for l in leaders:
             if l.date.day == current_date.day and l.date.month == current_date.month:
                 user_name = l.user_name
