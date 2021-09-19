@@ -13,6 +13,8 @@ reply_phrases = []
 
 
 def read_timetable():
+    global leaders
+    leaders = []
     excel_data = pandas.read_excel('leading.xlsx', sheet_name='Timetable')
     names_list = excel_data['Name'].tolist()
     user_names_list = excel_data['User name'].tolist()
@@ -24,7 +26,6 @@ def read_timetable():
     for i in range(0, len(names_list)):
         l = leader.Leader(names_list[i], user_names_list[i], chat_ids_list[i], days_list[i], month_list[i])
         leaders.append(l)
-    print(leaders)
 
 
 @bot.message_handler(commands=['start'], content_types=['text'])
@@ -49,6 +50,45 @@ def send_welcome(message):
             bot.send_message(message.from_user.id, "А я уже тебя знаю! Ты записан как ведущий.")
         else:
             bot.send_message(message.from_user.id, "Приятно познакомиться! Но ты пока не ведущий ;)")
+
+
+@bot.message_handler(commands=['whoisleadertoday'], content_types=['text'])
+def who_is_leader_today(message):
+    read_timetable()
+    if message.chat.username in allowed_leaders:
+        current_date = datetime.datetime.today()
+        for l in leaders:
+            if l.date.day == current_date.day and l.date.month == current_date.month:
+                user_name = l.user_name
+                bot.send_message(message.chat.id, 'Сегодня дневник ведет @' + user_name)
+                break
+    else:
+        bot.send_message(message.chat.id, 'Ты пока не ведущий.')
+
+
+@bot.message_handler(commands=['wheniamleader'], content_types=['text'])
+def when_i_am_leader(message):
+    read_timetable()
+    if message.chat.username in allowed_leaders:
+        for l in leaders:
+            if l.user_name == message.chat.username:
+                date = l.date
+                bot.send_message(message.chat.id, 'Ты ведешь дневник ' + str(date))
+                break
+    else:
+        bot.send_message(message.chat.id, 'Ты пока не ведущий.')
+
+
+@bot.message_handler(commands=['schedule'], content_types=['text'])
+def get_schedule(message):
+    read_timetable()
+    if message.chat.username in allowed_leaders:
+        result = ""
+        for l in leaders:
+            result += l.name + str(l.date) + '\n'
+        bot.send_message(message.chat.id, result)
+    else:
+        bot.send_message(message.chat.id, 'Ты пока не ведущий.')
 
 
 def find_last_leader_date():
