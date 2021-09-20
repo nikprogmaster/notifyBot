@@ -55,7 +55,7 @@ def send_welcome(message):
 @bot.message_handler(commands=['whoisleadertoday'], content_types=['text'])
 def who_is_leader_today(message):
     read_timetable()
-    if message.chat.username in allowed_leaders:
+    if message.from_user.username in allowed_leaders:
         current_date = datetime.datetime.now() + datetime.timedelta(hours=3)
         print(current_date.day)
         for l in leaders:
@@ -70,9 +70,9 @@ def who_is_leader_today(message):
 @bot.message_handler(commands=['wheniamleader'], content_types=['text'])
 def when_i_am_leader(message):
     read_timetable()
-    if message.chat.username in allowed_leaders:
+    if message.from_user.username in allowed_leaders:
         for l in leaders:
-            if l.user_name == message.chat.username:
+            if l.user_name == message.from_user.username:
                 date = l.date
                 bot.send_message(message.chat.id, 'Ты ведешь дневник ' + str(date))
                 break
@@ -83,7 +83,7 @@ def when_i_am_leader(message):
 @bot.message_handler(commands=['schedule'], content_types=['text'])
 def get_schedule(message):
     read_timetable()
-    if message.chat.username in allowed_leaders:
+    if message.from_user.username in allowed_leaders:
         result = ""
         for l in leaders:
             result += l.name + ' ' + str(l.date) + '\n'
