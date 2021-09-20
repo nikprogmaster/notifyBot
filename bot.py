@@ -86,7 +86,7 @@ def get_schedule(message):
     if message.chat.username in allowed_leaders:
         result = ""
         for l in leaders:
-            result += l.name + '          ' + str(l.date) + '\n'
+            result += l.name + ' ' + str(l.date) + '\n'
         bot.send_message(message.chat.id, result)
     else:
         bot.send_message(message.chat.id, 'Ты пока не ведущий.')
