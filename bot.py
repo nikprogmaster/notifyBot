@@ -5,8 +5,13 @@ import leader
 from threading import Thread
 import telebot
 import random
+from time import sleep
 
-bot = telebot.TeleBot('1870191359:AAG31P76p2xoTLcCGMt_dSnLn-sgQRp62ws')
+BOT_TOKEN = '1870191359:AAG31P76p2xoTLcCGMt_dSnLn-sgQRp62ws'
+BOT_INTERVAL = 3
+BOT_TIMEOUT = 30
+
+bot = None
 leaders = []
 allowed_leaders = []
 reply_phrases = []
@@ -26,70 +31,6 @@ def read_timetable():
     for i in range(0, len(names_list)):
         l = leader.Leader(names_list[i], user_names_list[i], chat_ids_list[i], days_list[i], month_list[i])
         leaders.append(l)
-
-
-@bot.message_handler(commands=['start'], content_types=['text'])
-def send_welcome(message):
-    if message.chat.type == "private":
-        excel_data_df = pandas.read_excel('leading.xlsx', sheet_name='Timetable')
-        user_names = excel_data_df['User name'].tolist()
-        print(message.chat.username)
-        if (message.chat.username in allowed_leaders) and (message.chat.username not in user_names):
-            wr = pandas.DataFrame(
-                {'Name': [message.chat.first_name],
-                 'User name': [message.chat.username],
-                 'Chat id': [message.chat.id],
-                 'Day': [1],
-                 'Month': [1]})
-            fr = pandas.concat([excel_data_df, wr], ignore_index=True)
-            writer = pandas.ExcelWriter('leading.xlsx', engine='xlsxwriter')
-            fr.to_excel(writer, 'Timetable', index=False)
-            writer.save()
-            bot.send_message(message.from_user.id, "Добро пожаловать! Я тебя узнал! Теперь ты есть в списке ведущих!")
-        elif message.chat.username in user_names:
-            bot.send_message(message.from_user.id, "А я уже тебя знаю! Ты записан как ведущий.")
-        else:
-            bot.send_message(message.from_user.id, "Приятно познакомиться! Но ты пока не ведущий ;)")
-
-
-@bot.message_handler(commands=['whoisleadertoday'], content_types=['text'])
-def who_is_leader_today(message):
-    read_timetable()
-    if message.from_user.username in allowed_leaders:
-        current_date = datetime.datetime.now() + datetime.timedelta(hours=3)
-        print(current_date.day)
-        for l in leaders:
-            if l.date.day == current_date.day and l.date.month == current_date.month:
-                user_name = l.user_name
-                bot.send_message(message.chat.id, 'Сегодня дневник ведет @' + user_name)
-                break
-    else:
-        bot.send_message(message.chat.id, 'Ты пока не ведущий.')
-
-
-@bot.message_handler(commands=['wheniamleader'], content_types=['text'])
-def when_i_am_leader(message):
-    read_timetable()
-    if message.from_user.username in allowed_leaders:
-        for l in leaders:
-            if l.user_name == message.from_user.username:
-                date = l.date
-                bot.send_message(message.chat.id, 'Ты ведешь дневник ' + str(date))
-                break
-    else:
-        bot.send_message(message.chat.id, 'Ты пока не ведущий.')
-
-
-@bot.message_handler(commands=['schedule'], content_types=['text'])
-def get_schedule(message):
-    read_timetable()
-    if message.from_user.username in allowed_leaders:
-        result = ""
-        for l in leaders:
-            result += l.name + ' ' + str(l.date) + '\n'
-        bot.send_message(message.chat.id, result)
-    else:
-        bot.send_message(message.chat.id, 'Ты пока не ведущий.')
 
 
 def find_last_leader_date():
@@ -206,17 +147,113 @@ def init_reply_phrases():
     f.close()
 
 
+def log(message):
+    f = open('logs.txt', 'a', encoding="utf-8")
+    f.write(str(datetime.datetime.now()) + ": " + message + "\n")
+    f.close()
+
+
 def start_bot():
-    bot.polling(non_stop=True, interval=1)
+    bot.polling(none_stop=True, interval=BOT_INTERVAL, timeout=BOT_TIMEOUT)
+
+
+def bot_polling():
+    global bot
+    print("Starting bot polling now")
+    while True:
+        try:
+            log("New bot instance started")
+            bot = telebot.TeleBot(BOT_TOKEN)
+            bot_actions()
+            init_leaders_names()
+            init_reply_phrases()
+            bot.polling(none_stop=True, interval=BOT_INTERVAL, timeout=BOT_TIMEOUT)
+        except Exception as ex:
+            log("Bot polling failed, restarting in {}sec. Error:\n{}".format(BOT_TIMEOUT, ex))
+            bot.stop_polling()
+            sleep(BOT_TIMEOUT)
+        else:
+            bot.stop_polling()
+            log("Bot polling loop finished")
+            break
+
+
+def bot_actions():
+    @bot.message_handler(commands=['start'], content_types=['text'])
+    def send_welcome(message):
+        if message.chat.type == "private":
+            excel_data_df = pandas.read_excel('leading.xlsx', sheet_name='Timetable')
+            user_names = excel_data_df['User name'].tolist()
+            print(message.chat.username)
+            if (message.chat.username in allowed_leaders) and (message.chat.username not in user_names):
+                wr = pandas.DataFrame(
+                    {'Name': [message.chat.first_name],
+                     'User name': [message.chat.username],
+                     'Chat id': [message.chat.id],
+                     'Day': [1],
+                     'Month': [1]})
+                fr = pandas.concat([excel_data_df, wr], ignore_index=True)
+                writer = pandas.ExcelWriter('leading.xlsx', engine='xlsxwriter')
+                fr.to_excel(writer, 'Timetable', index=False)
+                writer.save()
+                bot.send_message(message.from_user.id,
+                                 "Добро пожаловать! Я тебя узнал! Теперь ты есть в списке ведущих!")
+            elif message.chat.username in user_names:
+                bot.send_message(message.from_user.id, "А я уже тебя знаю! Ты записан как ведущий.")
+            else:
+                bot.send_message(message.from_user.id, "Приятно познакомиться! Но ты пока не ведущий ;)")
+
+    @bot.message_handler(commands=['whoisleadertoday'], content_types=['text'])
+    def who_is_leader_today(message):
+        read_timetable()
+        if message.from_user.username in allowed_leaders:
+            current_date = datetime.datetime.now() + datetime.timedelta(hours=3)
+            print(current_date.day)
+            for l in leaders:
+                if l.date.day == current_date.day and l.date.month == current_date.month:
+                    user_name = l.user_name
+                    bot.send_message(message.chat.id, 'Сегодня дневник ведет @' + user_name)
+                    break
+        else:
+            bot.send_message(message.chat.id, 'Ты пока не ведущий.')
+
+    @bot.message_handler(commands=['wheniamleader'], content_types=['text'])
+    def when_i_am_leader(message):
+        read_timetable()
+        if message.from_user.username in allowed_leaders:
+            for l in leaders:
+                if l.user_name == message.from_user.username:
+                    date = l.date
+                    bot.send_message(message.chat.id, 'Ты ведешь дневник ' + str(date))
+                    break
+        else:
+            bot.send_message(message.chat.id, 'Ты пока не ведущий.')
+
+    @bot.message_handler(commands=['schedule'], content_types=['text'])
+    def get_schedule(message):
+        read_timetable()
+        if message.from_user.username in allowed_leaders:
+            result = ""
+            for l in leaders:
+                result += l.name + ' ' + str(l.date) + '\n'
+            bot.send_message(message.chat.id, result)
+        else:
+            bot.send_message(message.chat.id, 'Ты пока не ведущий.')
 
 
 print("Bot is working")
-
-init_leaders_names()
-init_reply_phrases()
-
-t1 = Thread(target=start_bot)
+t1 = Thread(target=bot_polling)
+t1.daemon = True
 t2 = Thread(target=cycle_scheduling)
 t1.start()
 t2.start()
+
+# Keep main program running while bot runs threaded
+if __name__ == "__main__":
+    while True:
+        try:
+            sleep(120)
+        except KeyboardInterrupt:
+            break
+
 
