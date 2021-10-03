@@ -11,7 +11,7 @@ BOT_TOKEN = '1870191359:AAG31P76p2xoTLcCGMt_dSnLn-sgQRp62ws'
 BOT_INTERVAL = 3
 BOT_TIMEOUT = 30
 
-bot = None
+bot = telebot.TeleBot(BOT_TOKEN)
 leaders = []
 allowed_leaders = []
 reply_phrases = []
@@ -153,17 +153,12 @@ def log(message):
     f.close()
 
 
-def start_bot():
-    bot.polling(none_stop=True, interval=BOT_INTERVAL, timeout=BOT_TIMEOUT)
-
-
 def bot_polling():
     global bot
     print("Starting bot polling now")
     while True:
         try:
             log("New bot instance started")
-            bot = telebot.TeleBot(BOT_TOKEN)
             bot_actions()
             init_leaders_names()
             init_reply_phrases()
@@ -245,6 +240,7 @@ print("Bot is working")
 t1 = Thread(target=bot_polling)
 t1.daemon = True
 t2 = Thread(target=cycle_scheduling)
+t2.daemon = True
 t1.start()
 t2.start()
 
