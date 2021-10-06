@@ -34,9 +34,15 @@ def read_timetable():
 
 
 def find_last_leader_date():
-    leaders.sort(key=lambda leader: leader.date)
+    leaders.sort(key=lambda l: l.date)
     if len(leaders) > 0:
         return leaders[len(leaders)-1]
+
+
+def find_first_leader_by_date():
+    leaders.sort(key=lambda l: l.date)
+    if len(leaders) > 0:
+        return leaders[0]
 
 
 def find_user_name(day, month):
@@ -55,9 +61,9 @@ def send_message_in_day():
         random_index = random.randrange(0, len(reply_phrases))
         random_phrase = reply_phrases[random_index]
         bot.send_message(int(chat_id), random_phrase)
-    last_leader = find_last_leader_date()
-    if last_leader is not None and (last_leader.date.day == current_date.day and last_leader.date.month == current_date.month):
-        update_last_leader()
+    first_leader = find_first_leader_by_date()
+    if first_leader is not None and (first_leader.date.day == current_date.day and first_leader.date.month == current_date.month):
+        update_first_leader()
 
 
 def send_message_the_day_before():
@@ -96,7 +102,7 @@ def update_schedule():
     writer.save()
 
 
-def update_last_leader():
+def update_first_leader():
     excel_data = pandas.read_excel('leading.xlsx', sheet_name='Timetable')
     names_list = excel_data['Name'].tolist()
     user_names_list = excel_data['User name'].tolist()
