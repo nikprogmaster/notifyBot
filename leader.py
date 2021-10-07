@@ -18,3 +18,7 @@ class Leader:
     def decrease_date(self, days):
         self.date = self.date - datetime.timedelta(days=days)
 
+    def reset_all_states(self):
+        self.is_deleting_user = False
+        self.is_adding_user = False
+
