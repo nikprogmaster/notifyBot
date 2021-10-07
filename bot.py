@@ -199,11 +199,16 @@ def bot_actions():
         global leaders
         leaders = timetable.read_timetable()
         if message.from_user.username in allowed_leaders:
-            result = ""
-            for l in leaders:
-                result += l.name + ' @' + l.user_name + '\n'
-            bot.send_message(message.chat.id, result)
-            log("all_leaders: allowed")
+            if message.chat.type == "private":
+                search.find_leader(message.from_user.username, leaders).reset_all_states()
+                result = ""
+                for l in leaders:
+                    result += l.name + ' @' + l.user_name + '\n'
+                bot.send_message(message.chat.id, result)
+                log("all_leaders: allowed")
+            else:
+                bot.send_message(message.chat.id, "Данная команда недоступна в чатах")
+                log("all_leaders: restricted")
         else:
             bot.send_message(message.chat.id, 'Ты пока не ведущий.')
             log("all_leaders: restricted")
