@@ -4,13 +4,15 @@ import pandas
 from threading import Thread
 import telebot
 import random
+import os
 from time import sleep
+
 
 import timetable
 import search
 import filemanager
 
-BOT_TOKEN = '1870191359:AAG31P76p2xoTLcCGMt_dSnLn-sgQRp62ws'
+BOT_TOKEN = os.environ['NOTIFYBOT_TOKEN']
 BOT_INTERVAL = 3
 BOT_TIMEOUT = 30
 
