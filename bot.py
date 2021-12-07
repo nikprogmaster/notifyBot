@@ -26,6 +26,7 @@ reply_phrases = []
 def send_message_in_day():
     global leaders
     leaders = timetable.read_timetable()
+    first_leader_not_sorted = leaders[0]
     current_date = datetime.datetime.today()
     chat_idenf = search.find_user_name(current_date.day, current_date.month, leaders)
     if chat_idenf != "":
@@ -34,7 +35,7 @@ def send_message_in_day():
         bot.send_message(int(chat_idenf), random_phrase)
 
     first_leader = search.find_first_leader_by_date(leaders)
-    if first_leader is not None and (
+    if first_leader is not None and first_leader_not_sorted != first_leader and (
             first_leader.date.day == current_date.day and first_leader.date.month == current_date.month):
         timetable.update_first_leader()
 
