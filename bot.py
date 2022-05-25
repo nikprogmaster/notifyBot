@@ -182,7 +182,7 @@ def bot_actions():
         if message.from_user.username in super_leaders:
             user = search.find_leader(message.from_user.username, leaders)
             if user is not None:
-                user.set_states(is_adding_user=True)
+                user.set_states(is_adding=True)
                 bot.send_message(message.chat.id, 'Укажи никнэйм человека в формате "@nickname"')
             log("add_leader: allowed")
         else:
@@ -196,7 +196,7 @@ def bot_actions():
         if message.from_user.username in super_leaders:
             user = search.find_leader(message.from_user.username, leaders)
             if user is not None:
-                user.set_states(is_deleting_user=True)
+                user.set_states(is_deleting=True)
                 bot.send_message(message.chat.id, 'Укажи никнэйм человека в формате "@nickname"')
             log("delete_leader: allowed")
         else:
