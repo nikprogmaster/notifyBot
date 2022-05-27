@@ -14,7 +14,7 @@ month_list = []
 
 
 def add_new_leader(message):
-    excel_data_df = pandas.read_excel('leading.xlsx', sheet_name='Timetable')
+    excel_data_df = pandas.read_excel('res/leading.xlsx', sheet_name='Timetable')
     wr = pandas.DataFrame(
         {'Name': [message.chat.first_name],
          'User name': [message.chat.username],
