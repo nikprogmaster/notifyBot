@@ -1,17 +1,15 @@
-import schedule, time
+import time
 import datetime
-import pandas
 from threading import Thread
 import telebot
-import random
 from time import sleep
-
+import scheduling
 import timetable
 import search
 import filemanager
 import validator
 
-BOT_TOKEN = os.environ['NOTIFYBOT_TOKEN']
+BOT_TOKEN = ""
 BOT_INTERVAL = 3
 BOT_TIMEOUT = 30
 
@@ -20,63 +18,23 @@ leaders = []
 allowed_leaders = []
 super_leaders = []
 reply_phrases = []
-
-today_leader = None
-
-
-def send_message_in_day():
-    global leaders, today_leader
-    leaders = timetable.read_timetable(super_leaders)
-    first_leader_not_sorted = leaders[0]
-    current_date = datetime.datetime.today() + datetime.timedelta(hours=3)
-    chat_idenf = search.find_user_chatid(current_date.day, current_date.month, leaders)
-    if chat_idenf != "":
-        random_index = random.randrange(0, len(reply_phrases))
-        random_phrase = reply_phrases[random_index]
-        bot.send_message(int(chat_idenf), random_phrase)
-
-    first_leader = search.find_first_leader_by_date(leaders)
-    if first_leader is not None and first_leader_not_sorted != first_leader and (
-            first_leader.date.day == current_date.day and first_leader.date.month == current_date.month):
-        today_leader = search.find_username(current_date.day, current_date.month, leaders)
-        timetable.update_first_leader()
-
-
-def send_message_the_day_before():
-    global leaders, today_leader
-    leaders = timetable.read_timetable(super_leaders)
-    tomorrow_date = datetime.datetime.today() + datetime.timedelta(days=1)
-    chat_id = search.find_user_chatid(tomorrow_date.day, tomorrow_date.month, leaders)
-    if chat_id != "":
-        bot.send_message(int(chat_id), 'Не забудь, что завтра ты ведущий дневника МПшника! Подготовься.')
-    last_leader = search.find_last_leader_date(leaders)
-    if last_leader is not None and (
-            last_leader.date.day == tomorrow_date.day and last_leader.date.month == tomorrow_date.month):
-        current_date = datetime.datetime.today() + datetime.timedelta(hours=3)
-        today_leader = search.find_username(current_date.day, current_date.month, leaders)
-        timetable.update_schedule()
-
-
-def cycle_scheduling():
-    print("It is true")
-    schedule.every().day.at("05:00").do(send_message_in_day)
-    schedule.every().day.at("05:00").do(send_message_the_day_before)
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
+scheduling = scheduling.Scheduling(bot)
 
 
 def log(message):
-    f = open('logs.txt', 'a', encoding="utf-8")
+    f = open('res/logs.txt', 'a', encoding="utf-8")
     f.write(str(datetime.datetime.now()) + ": " + message + "\n")
     f.close()
 
 
+def clear_user_states(username):
+    leader = search.find_leader(username, leaders)
+    if leader is not None:
+        leader.set_states()
+
+
 def bot_polling():
-    global bot
-    global allowed_leaders
-    global super_leaders
-    global reply_phrases
+    global bot, allowed_leaders, super_leaders, reply_phrases
     print("Starting bot polling now")
     while True:
         try:
@@ -85,6 +43,8 @@ def bot_polling():
             allowed_leaders = filemanager.init_leaders_names()
             super_leaders = filemanager.init_super_leaders()
             reply_phrases = filemanager.init_reply_phrases()
+            scheduling.reply_phrases = reply_phrases
+            scheduling.super_leaders = super_leaders
             bot.polling(none_stop=True, interval=BOT_INTERVAL, timeout=BOT_TIMEOUT)
         except Exception as ex:
             log("Bot polling failed, restarting in {}sec. Error:\n{}".format(BOT_TIMEOUT, ex))
@@ -100,21 +60,9 @@ def bot_actions():
     @bot.message_handler(commands=['start'], content_types=['text'])
     def send_welcome(message):
         if message.chat.type == "private":
-            excel_data_df = pandas.read_excel('leading.xlsx', sheet_name='Timetable')
-            user_names = excel_data_df['User name'].tolist()
-            print(message.chat.username)
+            user_names = list(map(lambda x: x.user_name, leaders))
             if (message.chat.username in allowed_leaders) and (message.chat.username not in user_names):
-                # search.find_leader(message.chat.username, leaders).reset_all_states()
-                wr = pandas.DataFrame(
-                    {'Name': [message.chat.first_name],
-                     'User name': [message.chat.username],
-                     'Chat id': [message.chat.id],
-                     'Day': [1],
-                     'Month': [1]})
-                fr = pandas.concat([excel_data_df, wr], ignore_index=True)
-                writer = pandas.ExcelWriter('leading.xlsx', engine='xlsxwriter')
-                fr.to_excel(writer, 'Timetable', index=False)
-                writer.save()
+                timetable.add_new_leader(message)
                 bot.send_message(message.from_user.id,
                                  "Добро пожаловать! Я тебя узнал! Теперь ты есть в списке ведущих!")
             elif message.chat.username in user_names:
@@ -127,13 +75,9 @@ def bot_actions():
         global leaders
         leaders = timetable.read_timetable(super_leaders)
         if message.from_user.username in allowed_leaders:
-            leader = search.find_leader(message.from_user.username, leaders)
-            if leader is not None:
-                leader.set_states()
+            clear_user_states(message.from_user.username)
             current_date = datetime.datetime.now() + datetime.timedelta(hours=3)
             user_name = search.find_username(current_date.day, current_date.month, leaders)
-            if user_name is None:
-                user_name = today_leader
             bot.send_message(message.chat.id, 'Сегодня дневник ведет @' + user_name)
             log("who_is_leader_today: allowed")
         else:
@@ -145,13 +89,10 @@ def bot_actions():
         global leaders
         leaders = timetable.read_timetable(super_leaders)
         if message.from_user.username in allowed_leaders:
-            leader = search.find_leader(message.from_user.username, leaders)
-            if leader is not None:
-                leader.set_states()
+            clear_user_states(message.from_user.username)
             for l in leaders:
                 if l.user_name == message.from_user.username:
-                    date = l.date
-                    bot.send_message(message.chat.id, 'Ты ведешь дневник ' + str(date))
+                    bot.send_message(message.chat.id, 'Ты ведешь дневник ' + str(l.date))
                     break
             log("when_i_am_leader: allowed")
         else:
@@ -163,9 +104,7 @@ def bot_actions():
         global leaders
         leaders = timetable.read_timetable(super_leaders)
         if message.from_user.username in allowed_leaders:
-            leader = search.find_leader(message.from_user.username, leaders)
-            if leader is not None:
-                leader.set_states()
+            clear_user_states(message.from_user.username)
             result = ""
             for l in leaders:
                 result += l.name + ' ' + str(l.date) + '\n'
@@ -206,20 +145,20 @@ def bot_actions():
     @bot.message_handler(commands=['leaders'], content_types=['text'])
     def all_leaders(message):
         global leaders
-        leaders = timetable.read_timetable(super_leaders)
-        if message.from_user.username in allowed_leaders:
+        leaders = timetable.read_timetable(super_leaders, needed_empty=True)
+        if message.from_user.username in super_leaders:
             if message.chat.type == "private":
                 search.find_leader(message.from_user.username, leaders).set_states()
                 result = ""
-                for l in leaders:
-                    result += l.name + ' @' + l.user_name + '\n'
+                for nick in allowed_leaders:
+                    result += '@' + nick + '\n'
                 bot.send_message(message.chat.id, result)
                 log("all_leaders: allowed")
             else:
                 bot.send_message(message.chat.id, "Данная команда недоступна в чатах")
                 log("all_leaders: restricted")
         else:
-            bot.send_message(message.chat.id, 'Ты пока не ведущий.')
+            bot.send_message(message.chat.id, 'У тебя недостаточно прав')
             log("all_leaders: restricted")
 
     @bot.message_handler(commands=['temporarilyremoveleader'], content_types=['text'])
@@ -264,6 +203,24 @@ def bot_actions():
             bot.send_message(message.chat.id, 'У тебя недостаточно прав')
             log("swap_leaders_dates: restricted")
 
+    @bot.message_handler(commands=['turnonoff'], content_types=['text'])
+    def turn_off_on_notifications(message):
+        global schedule_thread, leaders
+        if message.from_user.username in super_leaders:
+            if scheduling.stop_notifications:
+                scheduling.stop_notifications = False
+                schedule_thread = Thread(target=scheduling.run_scheduling)
+                schedule_thread.daemon = True
+                schedule_thread.start()
+            else:
+                time.sleep(2)
+                scheduling.stop_notifications = True
+                schedule_thread.join()
+            log("turn_off_on_notifications: allowed")
+        else:
+            bot.send_message(message.chat.id, 'У тебя недостаточно прав')
+            log("turn_off_on_notifications: restricted")
+
     @bot.message_handler(content_types=['text'])
     def handle_user_input(message):
         global leaders
@@ -272,28 +229,26 @@ def bot_actions():
             if user.superuser_settings.is_adding_user:
                 if message.text.startswith("@"):
                     new_leader = message.text.replace("@", "")
-                    if search.find_leader(new_leader, leaders) is None:
-                        bot.send_message(message.chat.id, 'Ведущего с ником ' + message.text + " не существует")
-                    else:
-                        filemanager.add_leader_to_allowed_leaders(new_leader, allowed_leaders)
-                        user.set_states()
-                        bot.send_message(message.chat.id,
-                                         'Пользователь ' + message.text + " был успешно добавлен в список ведущих")
+                    filemanager.add_leader_to_allowed_leaders(new_leader, allowed_leaders)
+                    user.set_states()
+                    bot.send_message(message.chat.id,
+                                     'Пользователь ' + message.text + " был успешно добавлен в список ведущих")
                 else:
                     bot.send_message(message.chat.id, 'Вы ввели что-то некорректное. Попробуйте еще раз')
             elif user.superuser_settings.is_deleting_user:
                 if message.text.startswith("@"):
                     new_leader = message.text.replace("@", "")
-                    if search.find_leader(new_leader, leaders) is None:
+                    user_in_database = search.find_leader(new_leader, leaders)
+                    if user_in_database is None and new_leader not in allowed_leaders:
                         bot.send_message(message.chat.id, 'Ведущего с ником ' + message.text + " не существует")
                     else:
                         filemanager.delete_leader_from_allowed_leaders(new_leader, allowed_leaders)
-                        timetable.delete_forever(new_leader, leaders)
+                        if user_in_database is not None:
+                            timetable.delete_forever(new_leader, leaders)
                         user.set_states()
                         bot.send_message(message.chat.id,
                                          'Пользователь ' + message.text + " был успешно удален из списка ведущих")
-                        send_message_in_day()
-                        send_message_the_day_before()
+                        #оповестить пользователей, что даты изменились
                 else:
                     bot.send_message(message.chat.id, 'Вы ввели что-то некорректное. Попробуйте еще раз')
             elif user.superuser_settings.is_temporarily_deleting:
@@ -308,7 +263,6 @@ def bot_actions():
                 else:
                     bot.send_message(message.chat.id, 'Вы ввели что-то некорректное. Попробуйте еще раз')
             elif user.superuser_settings.is_changing_date:
-                print(validator.validate(message.text))
                 if message.text.startswith("@"):
                     user.superuser_settings.changing_date_leader = message.text.replace("@", "")
                     if search.find_leader(user.superuser_settings.changing_date_leader, leaders) is None:
@@ -330,28 +284,31 @@ def bot_actions():
                 if message.text.startswith("@"):
                     leader = message.text.replace("@", "")
                     if len(user.superuser_settings.swaping_leaders) == 0:
-                        user.superuser_settings.swaping_leaders.append(leader)
                         if search.find_leader(leader, leaders) is None:
                             bot.send_message(message.chat.id, 'Ведущего с ником ' + message.text + " не существует")
                         else:
+                            user.superuser_settings.swaping_leaders.append(leader)
                             bot.send_message(message.chat.id, 'Укажи никнэйм второго человека в формате "@nickname"')
                     else:
-                        user.superuser_settings.swaping_leaders.append(leader)
-                        timetable.swap_leaders_dates(user.superuser_settings.swaping_leaders[0],
-                                                     user.superuser_settings.swaping_leaders[1])
-                        user.set_states()
-                        bot.send_message(message.chat.id, 'Даты были успешно изменены')
+                        if search.find_leader(leader, leaders) is None:
+                            bot.send_message(message.chat.id, 'Ведущего с ником ' + message.text + " не существует")
+                        else:
+                            user.superuser_settings.swaping_leaders.append(leader)
+                            timetable.swap_leaders_dates(user.superuser_settings.swaping_leaders[0],
+                                                         user.superuser_settings.swaping_leaders[1])
+                            user.set_states()
+                            bot.send_message(message.chat.id, 'Даты были успешно изменены')
                 else:
                     bot.send_message(message.chat.id, 'Вы ввели что-то некорректное. Попробуйте еще раз')
 
 
 print("Bot is working")
-t1 = Thread(target=bot_polling)
-t1.daemon = True
-t2 = Thread(target=cycle_scheduling)
-t2.daemon = True
-t1.start()
-t2.start()
+polling_thread = Thread(target=bot_polling)
+polling_thread.daemon = True
+schedule_thread = Thread(target=scheduling.run_scheduling)
+schedule_thread.daemon = True
+polling_thread.start()
+schedule_thread.start()
 
 # Keep main program running while bot runs threaded
 if __name__ == "__main__":
