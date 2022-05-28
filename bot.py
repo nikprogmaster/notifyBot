@@ -214,10 +214,12 @@ def bot_actions():
                 schedule_thread = Thread(target=scheduling.run_scheduling)
                 schedule_thread.daemon = True
                 schedule_thread.start()
+                bot.send_message(message.chat.id, 'Уведомления включены')
             else:
                 time.sleep(2)
                 scheduling.stop_notifications = True
                 schedule_thread.join()
+                bot.send_message(message.chat.id, 'Уведомления отключены')
             log("turn_off_on_notifications: allowed")
         else:
             bot.send_message(message.chat.id, 'У тебя недостаточно прав')
