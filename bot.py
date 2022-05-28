@@ -9,7 +9,7 @@ import search
 import filemanager
 import validator
 
-BOT_TOKEN = "1870191359:AAGZCeaOuUJu8DkdDHbEt6PFczw6Jzcy00Y"
+BOT_TOKEN = ""
 BOT_INTERVAL = 3
 BOT_TIMEOUT = 30
 
