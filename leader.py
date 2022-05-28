@@ -22,7 +22,8 @@ class Leader:
         self.date = self.date - datetime.timedelta(days=days)
 
     def set_states(self, is_deleting=False, is_adding=False, is_temporarily_deleting=False, is_changing_date=False,
-                   is_swaping=False):
+                   is_swaping=False, is_transfering_rights=False):
         if self.superuser_settings is not None:
-            self.superuser_settings.set_states(is_deleting, is_adding, is_temporarily_deleting, is_changing_date, is_swaping)
+            self.superuser_settings.set_states(
+                is_deleting, is_adding, is_temporarily_deleting, is_changing_date, is_swaping, is_transfering_rights)
 

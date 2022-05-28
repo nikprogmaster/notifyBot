@@ -37,6 +37,23 @@ def add_leader_to_allowed_leaders(username, allowed_leaders):
         allowed_leaders.append(username)
 
 
+def add_super_leader(username, super_leaders):
+    if username not in super_leaders:
+        f = open('res/super_leaders.txt', 'a')
+        f.write(str(username) + "\n")
+        f.close()
+        super_leaders.append(username)
+
+
+def remove_super_leader(username, super_leaders):
+    f = open('res/super_leaders.txt', 'w')
+    for l in super_leaders:
+        if l != username:
+            f.write(l + "\n")
+    f.close()
+    super_leaders.remove(username)
+
+
 def delete_leader_from_allowed_leaders(username, allowed_leaders):
     f = open('res/leaders_names.txt', 'w')
     for l in allowed_leaders:

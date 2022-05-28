@@ -9,7 +9,7 @@ import search
 import filemanager
 import validator
 
-BOT_TOKEN = ""
+BOT_TOKEN = "1870191359:AAGZCeaOuUJu8DkdDHbEt6PFczw6Jzcy00Y"
 BOT_INTERVAL = 3
 BOT_TIMEOUT = 30
 
@@ -34,7 +34,7 @@ def clear_user_states(username):
 
 
 def bot_polling():
-    global bot, allowed_leaders, super_leaders, reply_phrases
+    global bot, allowed_leaders, super_leaders, reply_phrases, leaders
     print("Starting bot polling now")
     while True:
         try:
@@ -45,6 +45,7 @@ def bot_polling():
             reply_phrases = filemanager.init_reply_phrases()
             scheduling.reply_phrases = reply_phrases
             scheduling.super_leaders = super_leaders
+            leaders = timetable.read_timetable(super_leaders)
             bot.polling(none_stop=True, interval=BOT_INTERVAL, timeout=BOT_TIMEOUT)
         except Exception as ex:
             log("Bot polling failed, restarting in {}sec. Error:\n{}".format(BOT_TIMEOUT, ex))
@@ -206,6 +207,7 @@ def bot_actions():
     @bot.message_handler(commands=['turnonoff'], content_types=['text'])
     def turn_off_on_notifications(message):
         global schedule_thread, leaders
+        leaders = timetable.read_timetable(super_leaders)
         if message.from_user.username in super_leaders:
             if scheduling.stop_notifications:
                 scheduling.stop_notifications = False
@@ -220,6 +222,23 @@ def bot_actions():
         else:
             bot.send_message(message.chat.id, 'У тебя недостаточно прав')
             log("turn_off_on_notifications: restricted")
+
+    @bot.message_handler(commands=['transferrights'], content_types=['text'])
+    def transfer_rights_of_bot(message):
+        global leaders
+        leaders = timetable.read_timetable(super_leaders)
+        if message.from_user.username in super_leaders:
+            user = search.find_leader(message.from_user.username, leaders)
+            if user is not None:
+                user.set_states(is_transfering_rights=True)
+                bot.send_message(message.chat.id, 'Внимание! При передаче прав суперадмина, у вас пропадет '
+                                                  'возможность менять ведущих, даты, и др. ')
+
+                bot.send_message(message.chat.id, 'Укажи никнэйм нового суперадмина в формате @nickname ')
+            log("transfer_rights_of_bot: allowed")
+        else:
+            bot.send_message(message.chat.id, 'У тебя недостаточно прав')
+            log("transfer_rights_of_bot: restricted")
 
     @bot.message_handler(content_types=['text'])
     def handle_user_input(message):
@@ -260,6 +279,18 @@ def bot_actions():
                         timetable.delete_from_schedule(new_leader, leaders)
                         user.set_states()
                         bot.send_message(message.chat.id, 'Пользователь ' + message.text + " был убран из расписания")
+                else:
+                    bot.send_message(message.chat.id, 'Вы ввели что-то некорректное. Попробуйте еще раз')
+            elif user.superuser_settings.is_transfering_rights:
+                if message.text.startswith("@"):
+                    new_super_leader = message.text.replace("@", "")
+                    if search.find_leader(new_super_leader, leaders) is None:
+                        bot.send_message(message.chat.id, 'Ведущего с ником ' + message.text + " не существует")
+                    else:
+                        filemanager.add_super_leader(new_super_leader, super_leaders)
+                        filemanager.remove_super_leader(user.user_name, super_leaders)
+                        user.set_states()
+                        bot.send_message(message.chat.id, 'Вы передали права суперадмина ' + message.text)
                 else:
                     bot.send_message(message.chat.id, 'Вы ввели что-то некорректное. Попробуйте еще раз')
             elif user.superuser_settings.is_changing_date:
