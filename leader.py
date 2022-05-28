@@ -1,4 +1,5 @@
 import datetime
+import math
 
 
 class Leader:
@@ -8,7 +9,10 @@ class Leader:
         self.name = name
         self.user_name = user_name
         self.chat_id = chat_id
-        self.date = datetime.date(current_date.year, month, day)
+        if math.isnan(day) or math.isnan(month):
+            self.date = datetime.datetime.today()
+        else:
+            self.date = datetime.date(current_date.year, int(month), int(day))
         self.superuser_settings = superuser_settings
 
     def append_date(self, days):

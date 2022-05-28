@@ -35,7 +35,7 @@ def read_timetable(superusers, needed_empty=False):
         su_settings = None
         if user_names_list[i] in superusers:
             su_settings = superuser_settings.SuperuserSettings()
-        l = leader.Leader(names_list[i], user_names_list[i], chat_ids_list[i], int(days_list[i]), int(month_list[i]),
+        l = leader.Leader(names_list[i], user_names_list[i], chat_ids_list[i], days_list[i], month_list[i],
                           su_settings)
         leaders.append(l)
     return leaders
@@ -144,20 +144,6 @@ def change_leader_date(username, new_date):
         days_list[user_index] = day
         month_list[user_index] = month
 
-        # удаляем записи с пустыми датами
-        for i in range(0, len(user_names_list)):
-            if days_list[i] == 1 and month_list[i] == 1:
-                user_names_list.pop(i)
-                names_list.pop(i)
-                chat_ids_list.pop(i)
-                days_list.pop(i)
-                month_list.pop(i)
-
-        # сохраняем изменения перед тем, как отсортировать
-        _save_changes_in_excel()
-
-        # читаем таблицу (но без пустых записей), сортируем и сохраняем
-        _read_internal(False)
         _sort_timetable()
         _save_changes_in_excel()
 
@@ -195,8 +181,18 @@ def check_for_same_date(new_date):
 
 
 def _sort_timetable():
-    date_list = []
+    # прячем пустые записи в массив
+    nan_leaders = []
+    for i in range(0, len(days_list)):
+        if math.isnan(days_list[i]):
+            nan_leaders.append(NanLeader(user_names_list[i], names_list[i], chat_ids_list[i]))
+            user_names_list.pop(i)
+            names_list.pop(i)
+            chat_ids_list.pop(i)
+            days_list.pop(i)
+            month_list.pop(i)
 
+    date_list = []
     for i in range(len(days_list)):
         item = datetime.date.today()
         date_list.append(item.replace(month=int(month_list[i]), day=int(days_list[i])))
@@ -204,6 +200,14 @@ def _sort_timetable():
     if len(date_list) != 0:
         sort = quick_sort.QuickSort(names_list, user_names_list, chat_ids_list, days_list, month_list)
         sort.quick_sort(date_list, 0, len(date_list) - 1)
+
+    # достакм пустые записи обратно
+    for l in nan_leaders:
+        user_names_list.append(l.user_name)
+        names_list.append(l.name)
+        chat_ids_list.append(l.chat_id)
+        days_list.append(None)
+        month_list.append(None)
 
 
 def _read_internal(needed_empty=False):
@@ -223,12 +227,6 @@ def _read_internal(needed_empty=False):
             chat_ids_list.remove(chat_ids_list[i])
             days_list.remove(days_list[i])
             month_list.remove(month_list[i])
-    else:
-        for i in range(len(days_list)):
-            if math.isnan(days_list[i]):
-                days_list[i] = 1
-            if math.isnan(month_list[i]):
-                month_list[i] = 1
 
 
 def _save_changes_in_excel():
@@ -241,4 +239,12 @@ def _save_changes_in_excel():
     writer = pandas.ExcelWriter('res/leading.xlsx', engine='xlsxwriter')
     result_frame.to_excel(writer, 'Timetable', index=False)
     writer.save()
+
+
+class NanLeader:
+
+    def __init__(self, user_name, name, chat_id):
+        self.user_name = user_name
+        self.name = name
+        self.chat_id = chat_id
 
