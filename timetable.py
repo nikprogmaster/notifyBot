@@ -144,6 +144,15 @@ def change_leader_date(username, new_date):
         days_list[user_index] = day
         month_list[user_index] = month
 
+        # удаляем записи с пустыми датами
+        for i in range(0, len(user_names_list)):
+            if days_list[i] == 0 and month_list[i] == 0:
+                user_names_list.pop(i)
+                names_list.pop(i)
+                chat_ids_list.pop(i)
+                days_list.pop(i)
+                month_list.pop(i)
+
         # сохраняем изменения перед тем, как отсортировать
         _save_changes_in_excel()
 
@@ -217,9 +226,9 @@ def _read_internal(needed_empty=False):
     else:
         for i in range(len(days_list)):
             if math.isnan(days_list[i]):
-                days_list[i] = 1
+                days_list[i] = 0
             if math.isnan(month_list[i]):
-                month_list[i] = 1
+                month_list[i] = 0
 
 
 def _save_changes_in_excel():
