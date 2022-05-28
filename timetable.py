@@ -146,7 +146,7 @@ def change_leader_date(username, new_date):
 
         # удаляем записи с пустыми датами
         for i in range(0, len(user_names_list)):
-            if days_list[i] == 0 and month_list[i] == 0:
+            if days_list[i] == 1 and month_list[i] == 1:
                 user_names_list.pop(i)
                 names_list.pop(i)
                 chat_ids_list.pop(i)
@@ -226,9 +226,9 @@ def _read_internal(needed_empty=False):
     else:
         for i in range(len(days_list)):
             if math.isnan(days_list[i]):
-                days_list[i] = 0
+                days_list[i] = 1
             if math.isnan(month_list[i]):
-                month_list[i] = 0
+                month_list[i] = 1
 
 
 def _save_changes_in_excel():
