@@ -24,7 +24,7 @@ class Scheduling:
         leaders = timetable.read_timetable(self.super_leaders)
         current_date = datetime.datetime.today() + datetime.timedelta(hours=3)
         chat_idenf = search.find_user_chatid(current_date.day, current_date.month, leaders)
-        if chat_idenf != "":
+        if chat_idenf != "" and not self.stop_notifications:
             random_index = random.randrange(0, len(self.reply_phrases))
             random_phrase = self.reply_phrases[random_index]
             self.bot.send_message(int(chat_idenf), random_phrase)
@@ -40,7 +40,7 @@ class Scheduling:
         leaders = timetable.read_timetable(self.super_leaders)
         tomorrow_date = datetime.datetime.today() + datetime.timedelta(days=1)
         chat_id = search.find_user_chatid(tomorrow_date.day, tomorrow_date.month, leaders)
-        if chat_id != "":
+        if chat_id != "" and not self.stop_notifications:
             self.bot.send_message(int(chat_id), 'Не забудь, что завтра ты ведущий дневника МПшника! Подготовься.')
         # последний обновляемый ведущий
         last_leader = search.find_last_leader_date(leaders)
@@ -69,7 +69,7 @@ class Scheduling:
         sending_scheduler = schedule.Scheduler()
         sending_scheduler.every().day.at(notify_time).do(self.send_message_in_day)
         sending_scheduler.every().day.at(notify_time).do(self.send_message_the_day_before)
-        while not self.stop_notifications:
+        while True:
             sending_scheduler.run_pending()
             time.sleep(1)
 
