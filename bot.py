@@ -211,14 +211,9 @@ def bot_actions():
         if message.from_user.username in super_leaders:
             if scheduling.stop_notifications:
                 scheduling.stop_notifications = False
-                schedule_thread = Thread(target=scheduling.run_scheduling)
-                schedule_thread.daemon = True
-                schedule_thread.start()
                 bot.send_message(message.chat.id, 'Уведомления включены')
             else:
-                time.sleep(2)
                 scheduling.stop_notifications = True
-                schedule_thread.join()
                 bot.send_message(message.chat.id, 'Уведомления отключены')
             log("turn_off_on_notifications: allowed")
         else:

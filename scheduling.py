@@ -32,7 +32,7 @@ class Scheduling:
         first_leader = search.find_first_leader_by_date(leaders)
         if first_leader is not None and (
                 first_leader.date.day == current_date.day and first_leader.date.month == current_date.month):
-            thread = Thread(target=self.update_first_leader())
+            thread = Thread(target=self.update_first_leader)
             thread.daemon = True
             thread.start()
 
@@ -47,7 +47,7 @@ class Scheduling:
         if last_leader is not None and (
                 last_leader.date.day == tomorrow_date.day and last_leader.date.month == tomorrow_date.month):
             timetable.update_schedule()
-            thread = Thread(target=self.update_first_leader())
+            thread = Thread(target=self.update_first_leader)
             thread.daemon = True
             thread.start()
 
